@@ -47,6 +47,8 @@ You are a coding agent. You write clean, well-documented Python code.
 # Create and run the Level 1 agent
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
+    import sys
+
     agent = Agent(
         name="L1 Coding Agent",
         model="gpt-4.1-mini",
@@ -54,8 +56,13 @@ if __name__ == "__main__":
         base_dir=WORKSPACE,
     )
 
-    agent.run(
-        "Write a Fibonacci function that returns the nth Fibonacci number. "
-        "Save it to fib.py with a main block that prints the first 10 values, "
-        "then run it to verify.",
-    )
+    if "--chat" in sys.argv:
+        # Interactive mode: multi-turn conversation
+        agent.chat()
+    else:
+        # Single-shot mode: run one task
+        agent.run(
+            "Write a Fibonacci function that returns the nth Fibonacci number. "
+            "Save it to fib.py with a main block that prints the first 10 values, "
+            "then run it to verify.",
+        )

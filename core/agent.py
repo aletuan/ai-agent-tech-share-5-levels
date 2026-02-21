@@ -89,3 +89,65 @@ class Agent:
             print(f"[{self.name}] Final response:\n")
             print(final_text)
             return final_text
+
+    def chat(self) -> None:
+        """Run an interactive chat loop. Type 'exit' or 'quit' to stop."""
+        print(f"\n{'═' * 60}")
+        print(f"  {self.name} — Interactive Mode")
+        print(f"  Model: {self.model}")
+        print(f"  Type 'exit' to quit")
+        print(f"{'═' * 60}\n")
+
+        messages = [{"role": "system", "content": self.instructions}]
+        tools = get_tool_schemas()
+
+        while True:
+            try:
+                user_input = input("You: ").strip()
+            except (EOFError, KeyboardInterrupt):
+                print("\nGoodbye!")
+                break
+
+            if user_input.lower() in ("exit", "quit"):
+                print("Goodbye!")
+                break
+            if not user_input:
+                continue
+
+            messages.append({"role": "user", "content": user_input})
+
+            # --- Agent loop (same as run(), but reuses messages) ---
+            while True:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    tools=tools,
+                )
+
+                choice = response.choices[0]
+                message = choice.message
+
+                if message.tool_calls:
+                    messages.append(message.model_dump())
+
+                    for tool_call in message.tool_calls:
+                        fn_name = tool_call.function.name
+                        fn_args = json.loads(tool_call.function.arguments)
+                        print(f"  [{fn_name}] {fn_args}")
+
+                        result = execute_tool(fn_name, fn_args, self.base_dir)
+                        print(f"  → {result[:200]}{'...' if len(result) > 200 else ''}")
+
+                        messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": tool_call.id,
+                                "content": result,
+                            }
+                        )
+                    continue
+
+                final_text = message.content or ""
+                messages.append({"role": "assistant", "content": final_text})
+                print(f"\nAgent: {final_text}\n")
+                break
