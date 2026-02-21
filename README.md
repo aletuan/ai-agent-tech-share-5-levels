@@ -84,6 +84,7 @@ ai-agent-tech-share-5-levels/
 | Topic | English | Vietnamese |
 |-------|---------|------------|
 | How Tool Calling Works | [EN](docs/training/how-tool-calling-works.md) | [VI](docs/training/how-tool-calling-works.vi.md) |
+| Agent Loop Animation | [Run locally](docs/training/animation/) | `cd docs/training/animation && npm i && npm run dev` |
 | Design Overview | [EN](docs/plans/2026-02-21-5-levels-agentic-software-design.md) | [VI](docs/plans/2026-02-21-5-levels-agentic-software-design.vi.md) |
 | Level 1 Plan | [EN](docs/plans/2026-02-21-level-1-agent-with-tools.md) | [VI](docs/plans/2026-02-21-level-1-agent-with-tools.vi.md) |
 
