@@ -141,9 +141,149 @@ messages = [
 
 ## Quá Trình Quyết Định: Đi Từng Bước
 
-Hãy theo dõi một lần chạy thật từ Level 1 agent:
+Hãy theo dõi một lần chạy thật từ Level 1 agent.
 
-### Người dùng hỏi: "Write a Fibonacci function, save to fib.py, run it"
+### Sequence Diagram: Luồng Hoàn Chỉnh
+
+Biểu đồ này cho thấy chính xác điều gì xảy ra khi người dùng yêu cầu: *"Write a Fibonacci function, save to fib.py, run it"*
+
+```mermaid
+sequenceDiagram
+    actor User as Người dùng
+    participant Agent as Vòng lặp Agent<br/>(core/agent.py)
+    participant LLM as OpenAI API<br/>(gpt-4.1-mini)
+    participant Tools as Tool Registry<br/>(core/tools.py)
+    participant FS as Hệ thống File<br/>(workspace/)
+
+    User->>Agent: "Write a Fibonacci function,<br/>save to fib.py, run it"
+
+    Note over Agent: Xây dựng messages:<br/>system prompt + user message
+
+    rect rgb(240, 249, 255)
+        Note over Agent,LLM: Gọi API lần 1 — Model quyết định GHI FILE
+        Agent->>LLM: messages + tools=[read_file, write_file, run_shell]
+        Note over LLM: Suy luận:<br/>"Người dùng muốn lưu code vào file.<br/>Tôi có write_file. Dùng nó trước."
+        LLM-->>Agent: tool_calls: [write_file(path="fib.py", content="def fibonacci...")]
+    end
+
+    rect rgb(255, 248, 240)
+        Note over Agent,FS: Thực thi tool: write_file
+        Agent->>Tools: execute_tool("write_file", {path, content})
+        Tools->>FS: Ghi fib.py vào workspace/
+        FS-->>Tools: OK
+        Tools-->>Agent: "Written 324 bytes to fib.py"
+    end
+
+    Note over Agent: Thêm assistant message + kết quả tool vào messages
+
+    rect rgb(240, 249, 255)
+        Note over Agent,LLM: Gọi API lần 2 — Model quyết định CHẠY FILE
+        Agent->>LLM: messages (giờ có kết quả write_file)
+        Note over LLM: Suy luận:<br/>"File đã lưu. Instructions nói<br/>phải chạy để kiểm tra. Dùng run_shell."
+        LLM-->>Agent: tool_calls: [run_shell(command="python3 fib.py")]
+    end
+
+    rect rgb(255, 248, 240)
+        Note over Agent,FS: Thực thi tool: run_shell
+        Agent->>Tools: execute_tool("run_shell", {command})
+        Tools->>FS: Thực thi: python3 fib.py
+        FS-->>Tools: STDOUT: Fibonacci(0)=0, Fibonacci(1)=1, ...
+        Tools-->>Agent: "STDOUT:\nFibonacci(0)=0\n...\nReturn code: 0"
+    end
+
+    Note over Agent: Thêm assistant message + kết quả tool vào messages
+
+    rect rgb(240, 255, 240)
+        Note over Agent,LLM: Gọi API lần 3 — Model quyết định ĐÃ XONG
+        Agent->>LLM: messages (giờ có kết quả run_shell)
+        Note over LLM: Suy luận:<br/>"Code chạy OK (return code 0).<br/>Không lỗi. Mọi bước hoàn thành.<br/>Trả kết quả tóm tắt."
+        LLM-->>Agent: content: "I have written the Fibonacci function..."<br/>tool_calls: null
+    end
+
+    Note over Agent: Không có tool_calls → thoát vòng lặp
+
+    Agent->>User: "I have written the Fibonacci function<br/>to fib.py with a main block..."
+```
+
+### Sequence Diagram: Vòng Lặp Agent (Tổng Quát)
+
+Biểu đồ này thể hiện pattern chung — vòng `while True` vận hành mọi agent:
+
+```mermaid
+sequenceDiagram
+    participant Agent as Vòng lặp Agent
+    participant LLM as LLM API
+    participant Tools as Bộ thực thi Tool
+
+    loop while True
+        Agent->>LLM: Gửi messages + tool schemas
+
+        alt Model trả về tool_calls
+            LLM-->>Agent: tool_calls: [{name, arguments}]
+            Agent->>Agent: Thêm assistant message vào lịch sử
+
+            loop Với mỗi tool_call
+                Agent->>Tools: execute_tool(name, args)
+                Tools-->>Agent: chuỗi kết quả
+                Agent->>Agent: Thêm tool result vào lịch sử
+            end
+
+            Note over Agent: continue → quay lại gọi LLM
+
+        else Model trả về text (không có tool_calls)
+            LLM-->>Agent: content: "câu trả lời cuối cùng..."
+            Note over Agent: return → thoát vòng lặp
+        end
+    end
+```
+
+### Sequence Diagram: Khi Có Lỗi — Vòng Tự Sửa
+
+Biểu đồ này thể hiện vòng lặp tự sửa lỗi — model phát hiện lỗi, sửa, và thử lại:
+
+```mermaid
+sequenceDiagram
+    participant Agent as Vòng lặp Agent
+    participant LLM as LLM API
+    participant Tools as Bộ thực thi Tool
+
+    Agent->>LLM: "Viết function và chạy thử"
+    LLM-->>Agent: tool_calls: [write_file("app.py", code_có_bug)]
+    Agent->>Tools: write_file("app.py", ...)
+    Tools-->>Agent: "Written 150 bytes to app.py"
+
+    Agent->>LLM: messages + kết quả ghi file
+    LLM-->>Agent: tool_calls: [run_shell("python3 app.py")]
+    Agent->>Tools: run_shell("python3 app.py")
+    Tools-->>Agent: "STDERR: NameError: name 'x' is not defined<br/>Return code: 1"
+
+    Note over LLM: Suy luận: "Có lỗi! Cần đọc file,<br/>sửa bug, và chạy lại."
+
+    Agent->>LLM: messages + kết quả lỗi
+    LLM-->>Agent: tool_calls: [read_file("app.py")]
+    Agent->>Tools: read_file("app.py")
+    Tools-->>Agent: (nội dung file có bug)
+
+    Agent->>LLM: messages + nội dung file
+    LLM-->>Agent: tool_calls: [write_file("app.py", code_đã_sửa)]
+    Agent->>Tools: write_file("app.py", ...)
+    Tools-->>Agent: "Written 160 bytes to app.py"
+
+    Agent->>LLM: messages + kết quả ghi file
+    LLM-->>Agent: tool_calls: [run_shell("python3 app.py")]
+    Agent->>Tools: run_shell("python3 app.py")
+    Tools-->>Agent: "STDOUT: Success!<br/>Return code: 0"
+
+    Agent->>LLM: messages + kết quả thành công
+    Note over LLM: "Mọi bước hoàn thành rồi."
+    LLM-->>Agent: content: "Đã sửa bug và xác nhận chạy đúng."
+```
+
+---
+
+### Chi Tiết Từng Lần Gọi API
+
+Giờ hãy xem cùng luồng đó với chi tiết suy luận bên trong:
 
 **Lần gọi API 1:**
 

@@ -141,9 +141,149 @@ messages = [
 
 ## The Decision Process: A Step-by-Step Walkthrough
 
-Let's trace through a real execution from our Level 1 agent:
+Let's trace through a real execution from our Level 1 agent.
 
-### User asks: "Write a Fibonacci function, save to fib.py, run it"
+### Sequence Diagram: The Complete Flow
+
+This diagram shows exactly what happens when the user asks: *"Write a Fibonacci function, save to fib.py, run it"*
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Agent as Agent Loop<br/>(core/agent.py)
+    participant LLM as OpenAI API<br/>(gpt-4.1-mini)
+    participant Tools as Tool Registry<br/>(core/tools.py)
+    participant FS as File System<br/>(workspace/)
+
+    User->>Agent: "Write a Fibonacci function,<br/>save to fib.py, run it"
+
+    Note over Agent: Build messages:<br/>system prompt + user message
+
+    rect rgb(240, 249, 255)
+        Note over Agent,LLM: API Call 1 — Model decides to write the file
+        Agent->>LLM: messages + tools=[read_file, write_file, run_shell]
+        Note over LLM: Reasoning:<br/>"User wants code saved to file.<br/>I have write_file. Use it first."
+        LLM-->>Agent: tool_calls: [write_file(path="fib.py", content="def fibonacci...")]
+    end
+
+    rect rgb(255, 248, 240)
+        Note over Agent,FS: Execute tool: write_file
+        Agent->>Tools: execute_tool("write_file", {path, content})
+        Tools->>FS: Write fib.py to workspace/
+        FS-->>Tools: OK
+        Tools-->>Agent: "Written 324 bytes to fib.py"
+    end
+
+    Note over Agent: Append assistant message + tool result to messages
+
+    rect rgb(240, 249, 255)
+        Note over Agent,LLM: API Call 2 — Model decides to run the file
+        Agent->>LLM: messages (now includes write_file result)
+        Note over LLM: Reasoning:<br/>"File saved. Instructions say<br/>run to verify. Use run_shell."
+        LLM-->>Agent: tool_calls: [run_shell(command="python3 fib.py")]
+    end
+
+    rect rgb(255, 248, 240)
+        Note over Agent,FS: Execute tool: run_shell
+        Agent->>Tools: execute_tool("run_shell", {command})
+        Tools->>FS: Execute: python3 fib.py
+        FS-->>Tools: STDOUT: Fibonacci(0)=0, Fibonacci(1)=1, ...
+        Tools-->>Agent: "STDOUT:\nFibonacci(0)=0\n...\nReturn code: 0"
+    end
+
+    Note over Agent: Append assistant message + tool result to messages
+
+    rect rgb(240, 255, 240)
+        Note over Agent,LLM: API Call 3 — Model decides task is complete
+        Agent->>LLM: messages (now includes run_shell result)
+        Note over LLM: Reasoning:<br/>"Code ran OK (return code 0).<br/>No errors. All steps done.<br/>Return summary."
+        LLM-->>Agent: content: "I have written the Fibonacci function..."<br/>tool_calls: null
+    end
+
+    Note over Agent: No tool_calls → exit loop
+
+    Agent->>User: "I have written the Fibonacci function<br/>to fib.py with a main block..."
+```
+
+### Sequence Diagram: The Agent Loop (Generic)
+
+This diagram shows the general pattern — the `while True` loop that powers every agent:
+
+```mermaid
+sequenceDiagram
+    participant Agent as Agent Loop
+    participant LLM as LLM API
+    participant Tools as Tool Executor
+
+    loop while True
+        Agent->>LLM: Send messages + tool schemas
+
+        alt Model returns tool_calls
+            LLM-->>Agent: tool_calls: [{name, arguments}]
+            Agent->>Agent: Append assistant message to history
+
+            loop For each tool_call
+                Agent->>Tools: execute_tool(name, args)
+                Tools-->>Agent: result string
+                Agent->>Agent: Append tool result to history
+            end
+
+            Note over Agent: continue → loop back to LLM
+
+        else Model returns text (no tool_calls)
+            LLM-->>Agent: content: "final answer..."
+            Note over Agent: return → exit loop
+        end
+    end
+```
+
+### Sequence Diagram: What Happens When There's an Error
+
+This shows the self-correction loop — the model fixes errors and retries:
+
+```mermaid
+sequenceDiagram
+    participant Agent as Agent Loop
+    participant LLM as LLM API
+    participant Tools as Tool Executor
+
+    Agent->>LLM: "Write a function and run it"
+    LLM-->>Agent: tool_calls: [write_file("app.py", code_with_bug)]
+    Agent->>Tools: write_file("app.py", ...)
+    Tools-->>Agent: "Written 150 bytes to app.py"
+
+    Agent->>LLM: messages + write result
+    LLM-->>Agent: tool_calls: [run_shell("python3 app.py")]
+    Agent->>Tools: run_shell("python3 app.py")
+    Tools-->>Agent: "STDERR: NameError: name 'x' is not defined<br/>Return code: 1"
+
+    Note over LLM: Reasoning: "Error! I need to<br/>read the file, fix the bug,<br/>and run again."
+
+    Agent->>LLM: messages + error result
+    LLM-->>Agent: tool_calls: [read_file("app.py")]
+    Agent->>Tools: read_file("app.py")
+    Tools-->>Agent: (file content with bug)
+
+    Agent->>LLM: messages + file content
+    LLM-->>Agent: tool_calls: [write_file("app.py", fixed_code)]
+    Agent->>Tools: write_file("app.py", ...)
+    Tools-->>Agent: "Written 160 bytes to app.py"
+
+    Agent->>LLM: messages + write result
+    LLM-->>Agent: tool_calls: [run_shell("python3 app.py")]
+    Agent->>Tools: run_shell("python3 app.py")
+    Tools-->>Agent: "STDOUT: Success!<br/>Return code: 0"
+
+    Agent->>LLM: messages + success result
+    Note over LLM: "All steps complete now."
+    LLM-->>Agent: content: "Fixed the bug and verified it works."
+```
+
+---
+
+### Detailed Breakdown Per API Call
+
+Now let's see the same flow with the internal reasoning details:
 
 **API Call 1:**
 
