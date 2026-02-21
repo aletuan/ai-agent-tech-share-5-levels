@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 from core.agent import Agent
 
-# Load .env for OPENAI_API_KEY
+# Load .env for ANTHROPIC_API_KEY
 load_dotenv()
 
 # ---------------------------------------------------------------------------
@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     agent = Agent(
         name="L1 Coding Agent",
-        model="gpt-4.1-mini",
+        model="claude-haiku-4-5-20251001",
         instructions=INSTRUCTIONS,
         base_dir=WORKSPACE,
     )
