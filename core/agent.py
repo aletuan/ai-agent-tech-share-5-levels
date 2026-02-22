@@ -1,13 +1,13 @@
 """The agent loop — the core of every AI agent.
 
-Sends messages to OpenAI, handles tool calls, and loops until the model
-produces a final text response.
+Sends messages to Anthropic Claude, handles tool calls, and loops until the
+model produces a final text response.
 """
 
 import json
 from pathlib import Path
 
-from openai import OpenAI
+from anthropic import Anthropic
 
 from core.tools import execute_tool, get_tool_schemas
 
@@ -21,7 +21,7 @@ class Agent:
     def __init__(
         self,
         name: str = "Agent",
-        model: str = "gpt-4.1-mini",
+        model: str = "claude-haiku-4-5-20251001",
         instructions: str = "You are a helpful assistant.",
         base_dir: Path | None = None,
     ):
@@ -29,7 +29,7 @@ class Agent:
         self.model = model
         self.instructions = instructions
         self.base_dir = base_dir or Path.cwd()
-        self.client = OpenAI()  # uses OPENAI_API_KEY from env
+        self.client = Anthropic()  # uses ANTHROPIC_API_KEY from env
 
     def run(self, user_message: str, stream: bool = False) -> str:
         """Run the agent loop for a single user message.
@@ -37,7 +37,6 @@ class Agent:
         Returns the final text response.
         """
         messages = [
-            {"role": "system", "content": self.instructions},
             {"role": "user", "content": user_message},
         ]
         tools = get_tool_schemas()
@@ -47,44 +46,49 @@ class Agent:
             print(f"\n{'─' * 60}")
             print(f"[{self.name}] Calling {self.model}...")
 
-            response = self.client.chat.completions.create(
+            response = self.client.messages.create(
                 model=self.model,
+                max_tokens=4096,
+                system=self.instructions,
                 messages=messages,
                 tools=tools,
             )
 
-            choice = response.choices[0]
-            message = choice.message
-
             # --- Case 1: Model wants to call tools ---
-            if message.tool_calls:
-                # Append the assistant message (with tool_calls) to history
-                messages.append(message.model_dump())
+            if response.stop_reason == "tool_use":
+                # Append the assistant message (with tool_use blocks) to history
+                messages.append({"role": "assistant", "content": response.content})
 
-                for tool_call in message.tool_calls:
-                    fn_name = tool_call.function.name
-                    fn_args = json.loads(tool_call.function.arguments)
+                tool_results = []
+                for block in response.content:
+                    if block.type == "tool_use":
+                        fn_name = block.name
+                        fn_args = block.input
 
-                    print(f"[{self.name}] Tool call: {fn_name}({fn_args})")
+                        print(f"[{self.name}] Tool call: {fn_name}({fn_args})")
 
-                    # Execute the tool
-                    result = execute_tool(fn_name, fn_args, self.base_dir)
-                    print(f"[{self.name}] Result: {result[:200]}{'...' if len(result) > 200 else ''}")
+                        # Execute the tool
+                        result = execute_tool(fn_name, fn_args, self.base_dir)
+                        print(f"[{self.name}] Result: {result[:200]}{'...' if len(result) > 200 else ''}")
 
-                    # Append tool result to messages
-                    messages.append(
-                        {
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
                             "content": result,
-                        }
-                    )
+                        })
+
+                # Send tool results back as a user message
+                messages.append({"role": "user", "content": tool_results})
 
                 # Loop back to call the LLM again with tool results
                 continue
 
             # --- Case 2: Model produced a final text response ---
-            final_text = message.content or ""
+            final_text = ""
+            for block in response.content:
+                if hasattr(block, "text"):
+                    final_text += block.text
+
             print(f"\n{'─' * 60}")
             print(f"[{self.name}] Final response:\n")
             print(final_text)
@@ -98,7 +102,7 @@ class Agent:
         print(f"  Type 'exit' to quit")
         print(f"{'═' * 60}\n")
 
-        messages = [{"role": "system", "content": self.instructions}]
+        messages = []
         tools = get_tool_schemas()
 
         while True:
@@ -118,36 +122,41 @@ class Agent:
 
             # --- Agent loop (same as run(), but reuses messages) ---
             while True:
-                response = self.client.chat.completions.create(
+                response = self.client.messages.create(
                     model=self.model,
+                    max_tokens=4096,
+                    system=self.instructions,
                     messages=messages,
                     tools=tools,
                 )
 
-                choice = response.choices[0]
-                message = choice.message
+                if response.stop_reason == "tool_use":
+                    messages.append({"role": "assistant", "content": response.content})
 
-                if message.tool_calls:
-                    messages.append(message.model_dump())
+                    tool_results = []
+                    for block in response.content:
+                        if block.type == "tool_use":
+                            fn_name = block.name
+                            fn_args = block.input
+                            print(f"  [{fn_name}] {fn_args}")
 
-                    for tool_call in message.tool_calls:
-                        fn_name = tool_call.function.name
-                        fn_args = json.loads(tool_call.function.arguments)
-                        print(f"  [{fn_name}] {fn_args}")
+                            result = execute_tool(fn_name, fn_args, self.base_dir)
+                            print(f"  → {result[:200]}{'...' if len(result) > 200 else ''}")
 
-                        result = execute_tool(fn_name, fn_args, self.base_dir)
-                        print(f"  → {result[:200]}{'...' if len(result) > 200 else ''}")
-
-                        messages.append(
-                            {
-                                "role": "tool",
-                                "tool_call_id": tool_call.id,
+                            tool_results.append({
+                                "type": "tool_result",
+                                "tool_use_id": block.id,
                                 "content": result,
-                            }
-                        )
+                            })
+
+                    messages.append({"role": "user", "content": tool_results})
                     continue
 
-                final_text = message.content or ""
+                final_text = ""
+                for block in response.content:
+                    if hasattr(block, "text"):
+                        final_text += block.text
+
                 messages.append({"role": "assistant", "content": final_text})
                 print(f"\nAgent: {final_text}\n")
                 break

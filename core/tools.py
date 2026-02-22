@@ -138,9 +138,23 @@ TOOL_REGISTRY: dict[str, tuple[callable, dict]] = {
 }
 
 
-def get_tool_schemas() -> list[dict]:
-    """Return all tool schemas for the OpenAI API."""
-    return [schema for _, schema in TOOL_REGISTRY.values()]
+def get_tool_schemas(provider: str = "anthropic") -> list[dict]:
+    """Return all tool schemas for the given provider API."""
+    if provider == "openai":
+        return [schema for _, schema in TOOL_REGISTRY.values()]
+
+    # Anthropic format: {"name", "description", "input_schema"}
+    schemas = []
+    for _, (_, openai_schema) in TOOL_REGISTRY.items():
+        fn = openai_schema["function"]
+        input_schema = {k: v for k, v in fn["parameters"].items()
+                        if k != "additionalProperties"}
+        schemas.append({
+            "name": fn["name"],
+            "description": fn["description"],
+            "input_schema": input_schema,
+        })
+    return schemas
 
 
 def execute_tool(name: str, args: dict, base_dir: Path) -> str:
