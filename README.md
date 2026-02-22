@@ -1,6 +1,6 @@
 # 5 Levels of Agentic Software
 
-Build an AI coding agent from scratch — no frameworks, just Python + OpenAI SDK.
+Build an AI coding agent from scratch — no frameworks, just Python + Anthropic SDK.
 Each level adds one capability. Start simple, scale when needed.
 
 > Based on [The 5 Levels of Agentic Software](https://github.com/agno-agi/agno/tree/main/cookbook/levels_of_agentic_software) by Ashpreet Bedi.
@@ -28,7 +28,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 # Create .env with your API key
-echo "OPENAI_API_KEY=sk-your-key-here" > .env
+echo "ANTHROPIC_API_KEY=sk-ant-your-key-here" > .env
 
 # Run Level 1
 python level_1_tools.py              # single-shot demo

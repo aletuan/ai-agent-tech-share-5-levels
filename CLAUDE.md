@@ -5,8 +5,8 @@
 Educational project: Build an AI coding agent from scratch (no frameworks) across 5 progressive levels. Each level adds one capability on top of the previous.
 
 - **Reference**: [The 5 Levels of Agentic Software](https://github.com/agno-agi/agno/tree/main/cookbook/levels_of_agentic_software) by Ashpreet Bedi
-- **Approach**: All from primitives — raw OpenAI SDK, no agno or agent frameworks
-- **LLM**: OpenAI `gpt-4.1-mini`
+- **Approach**: All from primitives — raw Anthropic SDK, no agno or agent frameworks
+- **LLM**: Anthropic `claude-haiku-4-5-20251001`
 - **Language**: Python 3.11+
 
 ## The 5 Levels
@@ -96,7 +96,7 @@ git checkout main           # back to latest
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # then add your OPENAI_API_KEY
+cp .env.example .env   # then add your ANTHROPIC_API_KEY
 
 # Level 1
 python level_1_tools.py              # single-shot demo (Fibonacci)
@@ -120,8 +120,8 @@ cd docs/training/animation && npm i && npm run dev   # auto-advances every 10s
 
 ## Environment
 
-- **API Key**: `OPENAI_API_KEY` in `.env` (gitignored)
-- **Model**: `gpt-4.1-mini` (cost-effective for learning)
+- **API Key**: `ANTHROPIC_API_KEY` in `.env` (gitignored)
+- **Model**: `claude-haiku-4-5-20251001` (cost-effective for learning)
 - **Embeddings**: `text-embedding-3-small` (Level 2+)
 - **Storage**: SQLite at `workspace/agents.db` (Level 2+)
 - **Vector DB**: ChromaDB at `workspace/chromadb/` (Level 2+)
