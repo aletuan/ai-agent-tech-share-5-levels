@@ -56,17 +56,10 @@ export default function ComponentBox({ id, state }: ComponentBoxProps) {
         transition-colors duration-300
       `}
       animate={{
-        scale: isActive ? [1, 1.05, 1] : 1,
+        scale: 1,
         opacity: state === "idle" ? 0.5 : 1,
       }}
-      transition={{
-        scale: {
-          duration: 0.6,
-          repeat: isActive ? Infinity : 0,
-          repeatType: "reverse",
-        },
-        opacity: { duration: 0.3 },
-      }}
+      transition={{ opacity: { duration: 0.3 } }}
     >
       <span className="text-3xl mb-1">{config.icon}</span>
       <span className="text-sm font-semibold">{config.label}</span>

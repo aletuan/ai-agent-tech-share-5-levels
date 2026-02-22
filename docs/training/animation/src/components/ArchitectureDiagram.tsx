@@ -32,6 +32,15 @@ export default function ArchitectureDiagram({ step }: ArchitectureDiagramProps) 
         viewBox="0 0 720 380"
         className="absolute inset-0 w-full h-full pointer-events-none"
       >
+        <defs>
+          <filter id="flow-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
         {step.arrows.map((arrow, i) => {
           const from = POSITIONS[arrow.from];
           const to = POSITIONS[arrow.to];
