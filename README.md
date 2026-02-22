@@ -29,10 +29,17 @@ pip install -r requirements.txt
 
 # Create .env with your API key
 echo "ANTHROPIC_API_KEY=sk-ant-your-key-here" > .env
+echo "OPENAI_API_KEY=sk-your-key-here" >> .env   # Level 2+ embeddings
 
 # Run Level 1
 python level_1_tools.py              # single-shot demo
 python level_1_tools.py --chat       # interactive mode
+
+# Run Level 2 (Storage + Knowledge)
+python level_2_storage.py                    # single-shot
+python level_2_storage.py --chat             # interactive, new session
+python level_2_storage.py --chat --session my-session   # resume session
+python level_2_storage.py --list-sessions    # list saved sessions
 ```
 
 ## Navigating Between Levels
@@ -84,9 +91,12 @@ ai-agent-tech-share-5-levels/
 | Topic | English | Vietnamese |
 |-------|---------|------------|
 | How Tool Calling Works | [EN](docs/training/how-tool-calling-works.md) | [VI](docs/training/how-tool-calling-works.vi.md) |
+| How Storage Works | [EN](docs/training/how-storage-works.md) | [VI](docs/training/how-storage-works.vi.md) |
+| How RAG Works | [EN](docs/training/how-rag-works.md) | [VI](docs/training/how-rag-works.vi.md) |
 | Agent Loop Animation | [Run locally](docs/training/animation/) | `cd docs/training/animation && npm i && npm run dev` |
 | Design Overview | [EN](docs/plans/2026-02-21-5-levels-agentic-software-design.md) | [VI](docs/plans/2026-02-21-5-levels-agentic-software-design.vi.md) |
 | Level 1 Plan | [EN](docs/plans/2026-02-21-level-1-agent-with-tools.md) | [VI](docs/plans/2026-02-21-level-1-agent-with-tools.vi.md) |
+| Level 2 Plan | [EN](docs/plans/2026-02-22-level-2-storage-knowledge.md) | [VI](docs/plans/2026-02-22-level-2-storage-knowledge.vi.md) |
 
 ## The Core Idea
 

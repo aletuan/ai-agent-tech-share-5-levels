@@ -1,4 +1,11 @@
-export type ComponentId = "user" | "agent" | "llm" | "tools" | "filesystem";
+export type ComponentId =
+  | "user"
+  | "agent"
+  | "llm"
+  | "tools"
+  | "filesystem"
+  | "storage"
+  | "knowledge";
 
 export type ComponentState = "idle" | "active" | "sending" | "receiving";
 
@@ -17,6 +24,9 @@ export interface StepData {
   code?: string;
   reasoning?: string;
 }
+
+export const LEVEL_1_STEP_IDS = [1, 2, 3, 4, 5, 6, 7, 8];
+export const LEVEL_2_STEP_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 export const STEPS: StepData[] = [
   {
@@ -104,5 +114,22 @@ export const STEPS: StepData[] = [
     code: '"I have written the Fibonacci function to fib.py\nwith a main block that prints the first 10 values.\nThe script ran successfully and printed the correct\nFibonacci sequence."',
     reasoning:
       '"Code ran OK (return code 0).\nNo errors. All steps done.\nReturn final summary."',
+  },
+  // Level 2: Storage & Knowledge
+  {
+    id: 9,
+    title: "Agent \u2192 Knowledge (Level 2)",
+    description: "Agent searches ChromaDB for coding conventions before coding",
+    componentStates: { agent: "sending", knowledge: "receiving" },
+    arrows: [{ from: "agent", to: "knowledge", label: "search(query)" }],
+    code: 'search(user_message, k=3)\n\u2192 ["Use 4 spaces...", "Google-style docstrings..."]',
+  },
+  {
+    id: 10,
+    title: "Agent \u2192 Storage (Level 2)",
+    description: "Agent saves session to SQLite after each turn",
+    componentStates: { agent: "sending", storage: "receiving" },
+    arrows: [{ from: "agent", to: "storage", label: "save_session()" }],
+    code: "save_session(session_id, messages, db_path)\n\u2192 Persisted to workspace/agents.db",
   },
 ];

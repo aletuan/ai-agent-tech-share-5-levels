@@ -35,6 +35,18 @@ const COMPONENT_CONFIG: Record<
     color: "border-cyan-400",
     glowColor: "shadow-cyan-400/50",
   },
+  storage: {
+    label: "Storage",
+    icon: "\u{1F4BE}",
+    color: "border-orange-400",
+    glowColor: "shadow-orange-400/50",
+  },
+  knowledge: {
+    label: "Knowledge",
+    icon: "\u{1F4DA}",
+    color: "border-rose-400",
+    glowColor: "shadow-rose-400/50",
+  },
 };
 
 interface ComponentBoxProps {
@@ -50,7 +62,7 @@ export default function ComponentBox({ id, state }: ComponentBoxProps) {
     <motion.div
       className={`
         relative flex flex-col items-center justify-center
-        w-32 h-28 rounded-xl border-2 bg-slate-800
+        w-[128px] min-w-[128px] max-w-[128px] h-[112px] min-h-[112px] rounded-xl border-2 bg-slate-800
         ${config.color}
         ${isActive ? `shadow-lg ${config.glowColor}` : "border-opacity-40"}
         transition-colors duration-300
@@ -62,7 +74,7 @@ export default function ComponentBox({ id, state }: ComponentBoxProps) {
       transition={{ opacity: { duration: 0.3 } }}
     >
       <span className="text-3xl mb-1">{config.icon}</span>
-      <span className="text-sm font-semibold">{config.label}</span>
+      <span className="text-sm font-semibold text-center px-1 leading-tight">{config.label}</span>
       {state !== "idle" && (
         <motion.span
           className="absolute -top-2 -right-2 text-xs px-1.5 py-0.5 rounded-full bg-slate-700 text-white"
