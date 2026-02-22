@@ -10,6 +10,12 @@ interface AnimatedArrowProps {
   color?: string;
 }
 
+/** Number of data-flow particles traveling along the arrow */
+const FLOW_PARTICLE_COUNT = 3;
+
+/** Duration for one particle to travel from source to target */
+const FLOW_DURATION = 1.2;
+
 export default function AnimatedArrow({
   x1,
   y1,
@@ -27,6 +33,7 @@ export default function AnimatedArrow({
 
   return (
     <g>
+      {/* Base line with dashed flow animation */}
       <motion.line
         x1={x1}
         y1={y1}
@@ -51,6 +58,43 @@ export default function AnimatedArrow({
           },
         }}
       />
+
+      {/* Data-flow particles: travel from source to target along the line */}
+      {isActive &&
+        Array.from({ length: FLOW_PARTICLE_COUNT }).map((_, i) => (
+          <motion.circle
+            key={i}
+            r={4}
+            fill={color}
+            filter="url(#flow-glow)"
+            initial={{ cx: x1, cy: y1, opacity: 0 }}
+            animate={{
+              cx: [x1, x2],
+              cy: [y1, y2],
+              opacity: [0, 1, 1, 0],
+            }}
+            transition={{
+              cx: {
+                duration: FLOW_DURATION,
+                repeat: Infinity,
+                ease: "linear",
+                delay: i * (FLOW_DURATION / FLOW_PARTICLE_COUNT),
+              },
+              cy: {
+                duration: FLOW_DURATION,
+                repeat: Infinity,
+                ease: "linear",
+                delay: i * (FLOW_DURATION / FLOW_PARTICLE_COUNT),
+              },
+              opacity: {
+                duration: FLOW_DURATION,
+                repeat: Infinity,
+                times: [0, 0.1, 0.9, 1],
+                delay: i * (FLOW_DURATION / FLOW_PARTICLE_COUNT),
+              },
+            }}
+          />
+        ))}
 
       <motion.polygon
         points={`

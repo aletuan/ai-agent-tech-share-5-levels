@@ -36,6 +36,13 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [goNext, goPrev, goReset]);
 
+  // Auto-advance to next step after 10s if user doesn't click
+  useEffect(() => {
+    if (stepIndex >= STEPS.length - 1) return;
+    const timer = setTimeout(goNext, 10_000);
+    return () => clearTimeout(timer);
+  }, [stepIndex, goNext]);
+
   return (
     <div className="min-h-screen bg-slate-900 text-white flex flex-col">
       <header className="py-4 px-6 border-b border-slate-800">
