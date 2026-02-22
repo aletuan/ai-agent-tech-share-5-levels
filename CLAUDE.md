@@ -14,7 +14,7 @@ Educational project: Build an AI coding agent from scratch (no frameworks) acros
 | Level | Name | Core Addition | Status |
 |-------|------|--------------|--------|
 | 1 | Agent with Tools | Agent loop + tool calling | Done (tag: `level-1`) |
-| 2 | Agent with Storage & Knowledge | SQLite sessions + ChromaDB RAG | Pending |
+| 2 | Agent with Storage & Knowledge | SQLite sessions + ChromaDB RAG | Done (tag: `level-2`) |
 | 3 | Agent with Memory & Learning | Long-term memory + user preferences | Pending |
 | 4 | Multi-Agent Team | Coder + Reviewer + Tester + Leader | Pending |
 | 5 | Production System | PostgreSQL + FastAPI + Tracing | Pending |
@@ -102,6 +102,12 @@ cp .env.example .env   # then add your ANTHROPIC_API_KEY
 python level_1_tools.py              # single-shot demo (Fibonacci)
 python level_1_tools.py --chat       # interactive mode
 
+# Level 2 (needs OPENAI_API_KEY for embeddings)
+python level_2_storage.py                    # single-shot
+python level_2_storage.py --chat             # interactive, new session
+python level_2_storage.py --chat --session <id>   # resume session
+python level_2_storage.py --list-sessions    # list saved sessions
+
 # Agent Loop Animation (React visualizer)
 cd docs/training/animation && npm i && npm run dev   # auto-advances every 10s
 ```
@@ -113,6 +119,9 @@ cd docs/training/animation && npm i && npm run dev   # auto-advances every 10s
 | `core/agent.py` | The agent loop — `while True: LLM → tool_calls → execute → repeat` | Every level (new capabilities) |
 | `core/tools.py` | Tool registry — maps tool names to (function, JSON schema) pairs | Level 1 (stable after) |
 | `level_1_tools.py` | Level 1 entry point with instructions and workspace setup | Level 1 only |
+| `core/storage.py` | SQLite session persistence — save/load/list | Level 2 |
+| `core/knowledge.py` | ChromaDB + OpenAI embeddings, RAG search | Level 2 |
+| `level_2_storage.py` | Level 2 entry point — --chat, --session, --list-sessions | Level 2 |
 | `requirements.txt` | Dependencies — grows with each level | Every level |
 | `docs/plans/` | Design docs and implementation plans | Before each level |
 | `docs/training/` | Educational guides explaining concepts | After each level |
@@ -121,6 +130,7 @@ cd docs/training/animation && npm i && npm run dev   # auto-advances every 10s
 ## Environment
 
 - **API Key**: `ANTHROPIC_API_KEY` in `.env` (gitignored)
+- **Embeddings API**: `OPENAI_API_KEY` for Level 2+ (ChromaDB uses text-embedding-3-small)
 - **Model**: `claude-haiku-4-5-20251001` (cost-effective for learning)
 - **Embeddings**: `text-embedding-3-small` (Level 2+)
 - **Storage**: SQLite at `workspace/agents.db` (Level 2+)
@@ -138,3 +148,26 @@ cd docs/training/animation && npm i && npm run dev   # auto-advances every 10s
 8. **Update animation visualizer** — update `docs/training/animation/` (steps, diagram, data) so the Agent Loop Visualizer reflects the new level
 9. Update `README.md` with new level info and training doc links
 10. Tag: `git tag -a level-N -m "Level N: Description"` and push
+
+### Implementation Phases (from Level 2)
+
+- **Phase 1**: Planning — implementation plan (EN) + Vietnamese translation (.vi.md)
+- **Phase 2**: Core modules — new `core/*.py`, extend `core/agent.py`, entry point, `requirements.txt`
+- **Phase 3**: Entry point & deps — verify CLI works, install new packages
+- **Phase 4**: Training docs (EN + VI), animation updates, README, `.env.example`
+- **Phase 5**: Tag and push
+
+### Agent Extension Pattern
+
+- Add optional params to `Agent.__init__` (e.g. `session_id`, `storage_path`, `knowledge_path`) — `None` = backward compatible
+- Serialize Anthropic message content for storage: use `model_dump()` on content blocks, `_prepare_messages_for_storage()` helper
+
+### Gotchas (Level 2)
+
+- **Lazy imports**: If entry point has CLI flags that skip heavy deps (e.g. `--list-sessions` without ChromaDB), import those modules only when needed, not at top level
+
+### Animation Visualizer Notes
+
+- When adding new level: add level dropdown; new components go on new row with `ROW_GAP`, `COL_*` constants for alignment
+- Use `LEVEL_N_STEP_IDS` in `steps.ts` to filter steps per level
+- ComponentBox: fixed `w-[128px]` for consistent width
