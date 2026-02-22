@@ -101,6 +101,9 @@ cp .env.example .env   # then add your OPENAI_API_KEY
 # Level 1
 python level_1_tools.py              # single-shot demo (Fibonacci)
 python level_1_tools.py --chat       # interactive mode
+
+# Agent Loop Animation (React visualizer)
+cd docs/training/animation && npm i && npm run dev   # auto-advances every 10s
 ```
 
 ## Key Files to Know
@@ -113,6 +116,7 @@ python level_1_tools.py --chat       # interactive mode
 | `requirements.txt` | Dependencies — grows with each level | Every level |
 | `docs/plans/` | Design docs and implementation plans | Before each level |
 | `docs/training/` | Educational guides explaining concepts | After each level |
+| `docs/training/animation/` | Agent Loop Visualizer — React app with step-by-step flow, data-flow particles, auto-advance 10s | Training/UX tweaks |
 
 ## Environment
 
@@ -131,5 +135,6 @@ python level_1_tools.py --chat       # interactive mode
 5. Create entry point: `level_N_<name>.py`
 6. Update `requirements.txt` if new dependencies are needed
 7. Create training docs in `docs/training/` (EN + VI) for key concepts
-8. Update `README.md` with new level info and training doc links
-9. Tag: `git tag -a level-N -m "Level N: Description"` and push
+8. **Update animation visualizer** — update `docs/training/animation/` (steps, diagram, data) so the Agent Loop Visualizer reflects the new level
+9. Update `README.md` with new level info and training doc links
+10. Tag: `git tag -a level-N -m "Level N: Description"` and push
