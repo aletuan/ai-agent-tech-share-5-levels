@@ -66,6 +66,19 @@ export default function ArchitectureDiagram({ step, level }: ArchitectureDiagram
         {step.arrows.map((arrow, i) => {
           const from = POSITIONS[arrow.from];
           const to = POSITIONS[arrow.to];
+          // Agent → Knowledge/Storage: bent path (down → horizontal → down) to avoid cutting through row 2
+          const waypoints =
+            arrow.from === "agent" && arrow.to === "knowledge"
+              ? [
+                  { x: CENTER_X, y: ROW2_Y + 100 },
+                  { x: COL_RIGHT_X, y: ROW2_Y + 100 },
+                ]
+              : arrow.from === "agent" && arrow.to === "storage"
+                ? [
+                    { x: CENTER_X, y: ROW2_Y + 100 },
+                    { x: COL_LEFT_X, y: ROW2_Y + 100 },
+                  ]
+                : undefined;
           return (
             <AnimatedArrow
               key={`${step.id}-${i}`}
@@ -76,6 +89,7 @@ export default function ArchitectureDiagram({ step, level }: ArchitectureDiagram
               label={arrow.label}
               isActive={true}
               color={ARROW_COLORS[arrow.from]}
+              waypoints={waypoints}
             />
           );
         })}
